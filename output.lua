@@ -10,65 +10,29 @@ getgenv().ScriptExecuted = true;
 
 
 function v0_()
-	local v88 = game.PlaceId;
-	local v89 = {}
-	local v90 = ""
-	local v91 = os.date("!*t").hour;
-	local v92 = false;
-	function v1_()
-		local v93;
-		if v90 == "" then
-			v93 = game.HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. v88 .. "/servers/Public?sortOrder=Asc&limit=100"))
-		else
-			v93 = game.HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. v88 .. "/servers/Public?sortOrder=Asc&limit=100&cursor=" .. v90))
-		end;
-		local v94 = ""
-		if v93.nextPageCursor and v93.nextPageCursor ~= "null" and v93.nextPageCursor ~= nil then
-			v90 = v93.nextPageCursor
-		end;
-		local v95 = 0;
-		for v96, v97 in pairs(v93.data) do
-			local v98 = true;
-			v94 = tostring(v97.id)
-			if tonumber(v97.maxPlayers) > tonumber(v97.playing) then
-				for v99, v100 in pairs(v89) do
-					if v95 ~= 0 then
-						if v94 == tostring(v100) then
-							v98 = false
-						end
-					else
-						if tonumber(v91) ~= tonumber(v100) then
-							local v101 = pcall(function()
-								v89 = {}
-								table.insert(v89, v91)
-							end)
-						end
-					end;
-					v95 = v95 + 1
-				end;
-				if v98 == true then
-					table.insert(v89, v94)
-					wait(0.1)
-					pcall(function()
-						wait(0.1)
-						game:GetService("TeleportService"):TeleportToPlaceInstance(v88, v94, game.Players.LocalPlayer)
-					end)
-					wait(4)
-				end
-			end
-		end
-	end;
-	function v2_()
-		while task.wait(.1) do
-			pcall(function()
-				v1_()
-				if v90 ~= "" then
-					v1_()
-				end
-			end)
-		end
-	end;
-	v2_()
+local Player = game.Players.LocalPlayer    
+local Http = game:GetService("HttpService")
+local TPS = game:GetService("TeleportService")
+local Api = "https://games.roblox.com/v1/games/"
+
+local _place,_id = game.PlaceId, game.JobId
+local _servers = Api.._place.."/servers/Public?sortOrder=Desc&limit=100"
+function ListServers(cursor)
+   local Raw = game:HttpGet(_servers .. ((cursor and "&cursor="..cursor) or ""))
+   return Http:JSONDecode(Raw)
+end
+
+local Next; repeat
+   local Servers = ListServers(Next)
+   for i,v in next, Servers.data do
+       if v.playing < v.maxPlayers and v.id ~= _id then
+           local s,r = pcall(TPS.TeleportToPlaceInstance,TPS,_place,v.id,Player)
+           if s then break end
+       end
+   end
+   
+   Next = Servers.nextPageCursor
+until not Next
 end;
 
 
